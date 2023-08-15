@@ -4,6 +4,9 @@
 
 #include "foc.h"
 #include "fast_math.h"
+#include "math.h"
+
+//float DEBUG_ALPHA, DEBUG_BETA;
 
 void foc_refresh(Motor* motor){
     motor->torque_sp = motor->vel_sp = 0;
@@ -15,6 +18,9 @@ static bool foc_d_q_mod_control(Motor* motor, float mod_d, float mod_q, float ph
     // Inverse park transform
     float mod_alpha, mod_beta;
     inverse_park(mod_d, mod_q, phase, &mod_alpha, &mod_beta);
+
+//    DEBUG_ALPHA = mod_alpha;
+//    DEBUG_BETA = mod_beta;
 
     // SVM
     if(!foc_modulation_svm(mod_alpha, mod_beta, &(motor->pwm->duty_a), &(motor->pwm->duty_b), &(motor->pwm->duty_c))){
@@ -37,6 +43,13 @@ bool foc_alpha_beta_vec_control(Motor* motor, float vec_len, float vec_angle){
     return foc_d_q_vec_control(motor, vec_len, vec_angle, 0);
 }
 
+void foc_update_d_q(Motor* motor){
+    // Clarke transform
+    clarke_transform(motor->adc->i_a, motor->adc->i_b, motor->adc->i_c, &motor->i_alpha, &motor->i_beta);
+
+    // Park transform
+    park_transform(motor->i_alpha, motor->i_beta, motor->encoder->i_phase, &motor->i_d, &motor->i_q);
+}
 
 bool foc_voltage_control(Motor* motor, float Vd_set, float Vq_set, float phase)
 {
@@ -58,23 +71,14 @@ bool foc_voltage_control(Motor* motor, float Vd_set, float Vq_set, float phase)
 
 bool foc_current_control(Motor* motor, float Id_set, float Iq_set, float I_phase, float PWM_phase)
 {
-    // Clarke transform
-    float i_alpha, i_beta;
-    clarke_transform(motor->adc->i_a, motor->adc->i_b, motor->adc->i_c, &i_alpha, &i_beta);
 
-    // Park transform
-    float i_d, i_q;
-    park_transform(i_alpha, i_beta, I_phase, &i_d, &i_q);
-
-    motor->i_q = i_q;
-    motor->i_d = i_d;
 
     float mod_to_V = VBUS_TO_VPHASE_MAX(motor->adc->v_bus);
     float V_to_mod = 1.0f / mod_to_V;
 
     // Apply PI control
-    float Ierr_d = Id_set - i_d;
-    float Ierr_q = Iq_set - i_q;
+    float Ierr_d = Id_set - motor->i_d;
+    float Ierr_q = Iq_set - motor->i_q;
     float mod_d = V_to_mod * (motor->ctrl_i_integral_id + Ierr_d * motor->ctrl_i_kp);
     float mod_q = V_to_mod * (motor->ctrl_i_integral_iq + Ierr_q * motor->ctrl_i_kp);
 
@@ -84,13 +88,13 @@ bool foc_current_control(Motor* motor, float Id_set, float Iq_set, float I_phase
         mod_d *= mod_scalefactor;
         mod_q *= mod_scalefactor;
         motor->ctrl_i_integral_id *= 0.99f;
-        motor->ctrl_i_integral_id *= 0.99f;
+        motor->ctrl_i_integral_iq *= 0.99f;
     } else {
         motor->ctrl_i_integral_id += Ierr_d * motor->ctrl_i_ki * motor->adc->measure_period;
-        motor->ctrl_i_integral_id += Ierr_q * motor->ctrl_i_ki * motor->adc->measure_period;
+        motor->ctrl_i_integral_iq += Ierr_q * motor->ctrl_i_ki * motor->adc->measure_period;
     }
 
-    motor->adc->i_bus = (mod_d*i_d + mod_q*i_q);
+    motor->adc->i_bus = (mod_d*motor->i_d + mod_q*motor->i_q);
 
     return foc_d_q_mod_control(motor, mod_d, mod_q, PWM_phase);
 }

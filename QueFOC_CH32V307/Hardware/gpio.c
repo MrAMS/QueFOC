@@ -68,6 +68,19 @@ void hardware_motor_gpio_boot(void){
     GPIO_Init(GPIOB, &GPIO_InitStructure);
 
     /*
+     * UART4 Pin
+     * PC10 UART4_TX
+     * PC11 UART4_RX
+     */
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+    GPIO_Init(GPIOC, &GPIO_InitStructure);
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_Init(GPIOC, &GPIO_InitStructure);
+
+    /*
      * SPI3
      * PA15 SPI3_NSS
      * PB3  SPI3_SCK
@@ -135,7 +148,8 @@ void hardware_encoder_gpio_boot(void){
 
     // MISO
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_14;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    //GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
     GPIO_Init( GPIOB, &GPIO_InitStructure );
 
     // MOSI

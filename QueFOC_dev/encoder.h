@@ -14,19 +14,21 @@ typedef struct {
     uint32_t cpr;
     uint16_t motor_pole_pairs;
     //
-    float phase;        //  [rad]
-    float phase_vel;    //  [rad/s]
+    float i_phase;        //  [rad]
+    float i_phase_vel;    //  [rad/s]
     float vel;          //  [turn/s]
     float pos;          //  [turn]
     //
     bool dir;
-    uint32_t offset;
+    uint16_t offset;
     //
-    uint32_t cnt_raw;
-    uint32_t cnt_raw_pre;
+    uint16_t cnt_raw;
+    int32_t cnt;
+    int32_t cnt_pre;
     int32_t cnt_sum;
+    int32_t cnt_delta;
 
-    uint16_t cnt_rx_error;
+    float cnt_rx_error;
 
     // PLL algorithm
     float pll_kp, pll_ki;
@@ -34,6 +36,7 @@ typedef struct {
     float cnt_vel_estimate;
 
     float interpolation;
+    float interpolated_cnt;
 
     /* Hardware specific */
     void        (*hardware_boot)(void);
@@ -41,10 +44,14 @@ typedef struct {
 
 } Encoder;
 
-void encoder_init(Encoder *encoder, uint32_t freq, int motor_pole_pairs, void (*hardware_boot)(void), bool (*hardware_get_abs_pos_cnt)(uint16_t*));
+void encoder_init(Encoder *encoder, uint32_t freq, uint32_t cpr, int motor_pole_pairs, void (*hardware_boot)(void), bool (*hardware_get_abs_pos_cnt)(uint16_t*));
 
 void encoder_boot(Encoder *encoder);
 
-void encoder_update(Encoder *encoder);
+bool encoder_update(Encoder *encoder);
+
+void encoder_pll_clear(Encoder *encoder);
+
+void encoder_pll_param_update(Encoder *encoder, float bandwidth);
 
 #endif //QUEFOC_DEV_ENCODER_H

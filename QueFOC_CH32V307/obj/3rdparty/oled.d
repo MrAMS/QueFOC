@@ -1,12 +1,4 @@
-User/main.o: ../User/main.c \
- S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/motor.h \
- S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/encoder.h \
- S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/fast_math.h \
- S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/pwm.h \
- S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/adc_sensor.h \
- S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/pid.h \
- S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/comm.h \
- S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/motor.h \
+3rdparty/oled.o: ../3rdparty/oled.c ../3rdparty/oled.h \
  S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_CH32V307\Hardware/hardware.h \
  S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_CH32V307\Peripheral\inc/ch32v30x.h \
  S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_CH32V307\Core/core_riscv.h \
@@ -36,25 +28,9 @@ User/main.o: ../User/main.c \
  S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_CH32V307\Peripheral\inc/ch32v30x_wwdg.h \
  S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_CH32V307\User/ch32v30x_it.h \
  S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_CH32V307\Peripheral\inc/ch32v30x_misc.h \
- S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/foc.h \
- S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/fast_math.h \
- S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_CH32V307\3rdparty/oled.h
+ ../3rdparty/oledfont.h
 
-S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/motor.h:
-
-S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/encoder.h:
-
-S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/fast_math.h:
-
-S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/pwm.h:
-
-S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/adc_sensor.h:
-
-S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/pid.h:
-
-S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/comm.h:
-
-S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/motor.h:
+../3rdparty/oled.h:
 
 S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_CH32V307\Hardware/hardware.h:
 
@@ -114,8 +90,4 @@ S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_CH32V307\User/ch32v30x_it.h:
 
 S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_CH32V307\Peripheral\inc/ch32v30x_misc.h:
 
-S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/foc.h:
-
-S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_dev/fast_math.h:
-
-S:\EE\SmartCar\BLDC\code\QueFOC\QueFOC_CH32V307\3rdparty/oled.h:
+../3rdparty/oledfont.h:

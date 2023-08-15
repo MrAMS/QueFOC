@@ -75,6 +75,12 @@ static void cmder_cmd_motor(Cmder* cmder, uint32_t cmd_pos){
                 case 'S':
                     motor_stop(cmder->motor);
                     break;
+                case 'T':
+                    cmder->motor->state = MS_RUN_TORQUE;
+                    break;
+                case 'V':
+                    cmder->motor->state = MS_RUN_VELOCITY;
+                    break;
                 // none
                 case '\0':
                     cmder_report_prt(cmder, "state=%d\n", cmder->motor->state);
@@ -92,14 +98,14 @@ static void cmder_cmd_motor(Cmder* cmder, uint32_t cmd_pos){
                 case 'T':
                 {
                     if(!cmder_cmd_get_param_f(cmder, cmd_pos+1, &cmder->motor->torque_input))
-                        cmder_report_prt(cmder, "torque_sp=%d\n", cmder->motor->torque_sp);
+                        cmder_report_prt(cmder, "torque_sp=%f\n", cmder->motor->torque_sp);
                 }
                     break;
                 // Vel close loop
                 case 'V':
                 {
                     if(!cmder_cmd_get_param_f(cmder, cmd_pos+1, &cmder->motor->vel_input))
-                        cmder_report_prt(cmder, "vel_sp=%d\n", cmder->motor->vel_sp);
+                        cmder_report_prt(cmder, "vel_sp=%f\n", cmder->motor->vel_sp);
                 }
                     break;
                 default:
@@ -107,11 +113,35 @@ static void cmder_cmd_motor(Cmder* cmder, uint32_t cmd_pos){
             }
         }
             break;
+        // Vel PID
+        case 'K':
+        {
+            switch (cmder->cmd[++cmd_pos]) {
+                // kp
+                case 'P':
+                {
+                    if(!cmder_cmd_get_param_f(cmder, cmd_pos+1, &cmder->motor->ctrl_vel_kp))
+                        cmder_report_prt(cmder, "ctrl_vel_kp=%f\n", cmder->motor->ctrl_vel_kp);
+                }
+                    break;
+                // kp
+                case 'I':
+                {
+                    if(!cmder_cmd_get_param_f(cmder, cmd_pos+1, &cmder->motor->ctrl_vel_ki))
+                        cmder_report_prt(cmder, "ctrl_vel_ki=%f\n", cmder->motor->ctrl_vel_ki);
+                }
+                    break;
+                default:
+                    cmder_cmd_error(cmder, cmd_pos);
+            }
+        }
+            break;
+
         // current control bandwidth
         case 'B':
         {
-            if(!cmder_cmd_get_param_f(cmder, cmd_pos+1, &cmder->motor->ctrl_i_bandwidth))
-                cmder_report_prt(cmder, "ctrl_i_bandwidth=%.3f\n", cmder->motor->ctrl_i_bandwidth);
+            if(!cmder_cmd_get_param_f(cmder, cmd_pos+1, &cmder->motor->i_ctrl_bandwidth))
+                cmder_report_prt(cmder, "ctrl_i_bandwidth=%.3f\n", cmder->motor->i_ctrl_bandwidth);
         } break;
         default:
             cmder_cmd_error(cmder, cmd_pos);
@@ -174,7 +204,7 @@ static void cmder_cmd_encoder(Cmder* cmder, uint32_t cmd_pos){
 }
 
 #ifdef DEBUG_CMD
-float debug_id_set;
+float debug_id_set=0.3;
 static void cmder_cmd_debug(Cmder* cmder, uint32_t cmd_pos){
     switch (cmder->cmd[++cmd_pos]) {
         // PWM output
@@ -216,12 +246,13 @@ static void cmder_cmd_debug(Cmder* cmder, uint32_t cmd_pos){
                     cmder_cmd_get_param(cmder, cmd_pos+1, &t);
                     float phase=0;
                     motor_stop(cmder->motor);
-                    for(int i=0;i<t*40;++i){
+                    for(int i=0;i<t*20;++i){
                         if(foc_d_q_vec_control(cmder->motor, 0.1, 0, phase))
                             pwm_sync_duty(cmder->motor->pwm);
-                        hardware_delay_ms(20);
-
-                        phase += PI/50;
+                        hardware_delay_ms(100);
+                        //encoder_update(cmder->motor->encoder);
+                        //cmder_report_prt(cmder, "%d %.3f\n", ret, (cmder->motor->encoder->data_raw-cmder->motor->encoder->offset)*1.0f*PIx2*7/16384);
+                        phase += PI/10;
                         //phase += PI/10;
                     }
                     motor_stop(cmder->motor);
@@ -355,10 +386,15 @@ void monitor_boot(Monitor* monitor){
 }
 
 void monitor_prt(Monitor* monitor, const char *format, ...){
+    static bool blocked = false;
+//    while(blocked);
+    if(blocked) return;
+    blocked = true;
     va_list ap;
     va_start(ap, format);
     vsnprintf(monitor->prt_buf, MAX_PRT_BUF_SIZE, format, ap);
     va_end(ap);
     monitor->hardware_transmit(monitor->prt_buf);
+    blocked = false;
 }
 

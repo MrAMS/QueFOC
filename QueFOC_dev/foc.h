@@ -18,6 +18,8 @@ void foc_refresh(Motor* motor);
 bool foc_d_q_vec_control(Motor* motor, float vec_len, float vec_angle, float phase);
 bool foc_alpha_beta_vec_control(Motor* motor, float vec_len, float vec_angle);
 
+void foc_update_d_q(Motor* motor);
+
 bool foc_voltage_control(Motor* motor, float Vd_set, float Vq_set, float phase);
 bool foc_current_control(Motor* motor, float Id_set, float Iq_set, float I_phase, float PWM_phase);
 

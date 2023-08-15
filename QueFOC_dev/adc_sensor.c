@@ -51,6 +51,9 @@ void adc_sensor_init(ADC_sensor* adc,
     adc->i_scale                      =   3.3f / (float)adc->resolution / shunt_resistance / i_op_amp_gain;
     adc->vbus_scale                   =   (v_bus_gain * 3.3f / (float)adc->resolution);
     adc->i_op_amp_offset_theory       =   (uint16_t)(i_op_amp_offset/3.3f*(float)adc->resolution);
+
+    //FIXME
+    adc->v_bus_raw = adc->v_bus = 12;
 }
 
 void adc_boot(ADC_sensor* adc){
@@ -70,7 +73,7 @@ void adc_update(ADC_sensor* adc){
     LOW_PASS_FAST(adc->v_bus, adc->v_bus_raw, 0.05f);
 
     // FIXME
-    adc->v_bus = 12.6f;
+    adc->v_bus = adc->v_bus_raw = 12.0f;
 
     adc->v_gnd = (float)(adc->hardware_adc_read_vgnd());
 }

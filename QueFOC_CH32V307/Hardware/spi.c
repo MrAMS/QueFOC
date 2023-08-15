@@ -24,7 +24,7 @@ void hardware_encoder_spi_boot(){
     SPI_Init( ENCODER_SPIx, &SPI_InitStructure );
 
     //SPI_SSOutputCmd( ENCODER_SPIx, ENABLE );
-    //SPI_SSOutputCmd( ENCODER_SPIx, DISABLE );
+//    SPI_SSOutputCmd( ENCODER_SPIx, DISABLE );
     SPI_Cmd( ENCODER_SPIx, ENABLE );
 
 }
@@ -32,7 +32,7 @@ void hardware_encoder_spi_boot(){
 void spi_write(SPI_TypeDef *SPIx, u16 data){
     while(SPI_I2S_GetFlagStatus(SPIx, SPI_I2S_FLAG_TXE) == RESET) {}
     SPI_I2S_SendData(SPIx, data);
-    //while(SPI_I2S_GetFlagStatus(SPIx, SPI_I2S_FLAG_TXE) == RESET) {}
+    while(SPI_I2S_GetFlagStatus(SPIx, SPI_I2S_FLAG_TXE) == RESET) {}
 }
 
 u16 spi_read(SPI_TypeDef *SPIx){
@@ -45,11 +45,11 @@ u16 spi_write_read(SPI_TypeDef *SPIx, u16 data){
     spi_write(SPIx, data);
 //    GPIO_SetBits(GPIOB, GPIO_Pin_12);
 //    hardware_delay_us(1);
-//
+////
 //    GPIO_ResetBits(GPIOB, GPIO_Pin_12);
     u16 raw_data = spi_read(SPIx);
     GPIO_SetBits(GPIOB, GPIO_Pin_12);
-    hardware_delay_us(1);
+    //hardware_delay_us(2);
 
     return raw_data;
 }
@@ -69,16 +69,20 @@ bool hardware_encoder_spi_data(u16 *data){
     // [15] [14]        [13:0]
     // PARC EF(ERRO-1)  Data
     u16 raw_data = spi_write_read(ENCODER_SPIx, 0xffff);
-//    spi_write_read(ENCODER_SPIx, 0);
+    //for(unsigned int j=0;j<0xfffffff;++j);
+
+//    spi_write_read(ENCODER_SPIx, 0xffff);
+//    u16 raw_data = spi_write_read(ENCODER_SPIx, 0);
+
 
 
     if(check_parity(raw_data)){
         return 0;
-    }/*else if((raw_data>>14) & 1){
+    }else if((raw_data>>14) & 1){
         // if EF=1
-        *data = raw_data;
-        return 2;
-    }*/else{
+        *data = raw_data & 0x3fff;
+        return 1; // FIXME
+    }else{
         *data = raw_data & 0x3fff;
     }
     //SPI_Cmd( ENCODER_SPIx, DISABLE);

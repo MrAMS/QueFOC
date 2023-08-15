@@ -1,5 +1,5 @@
 ################################################################################
-# MRS Version: {"version":"1.8.4","date":"2023/02/15"}
+# MRS Version: {"version":"1.8.5","date":"2023/05/22"}
 # Automatically-generated file. Do not edit!
 ################################################################################
 
@@ -15,6 +15,7 @@ RM := rm -rf
 -include Peripheral/src/subdir.mk
 -include Hardware/subdir.mk
 -include Core/subdir.mk
+-include 3rdparty/subdir.mk
 -include subdir.mk
 -include objects.mk
 

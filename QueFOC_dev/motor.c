@@ -6,6 +6,8 @@
 #include "foc.h"
 #include <string.h>
 
+extern Monitor monitor;
+
 void motor_init(Motor* motor,
                 uint8_t id, uint32_t KV, float calib_current, float calib_voltage,
                 float ctrl_i_bandwidth, float inertia,
@@ -19,7 +21,7 @@ void motor_init(Motor* motor,
     motor->id = id;
     motor->calib_current = calib_current;
     motor->calib_voltage = calib_voltage;
-    motor->ctrl_i_bandwidth = ctrl_i_bandwidth;
+    motor->i_ctrl_bandwidth = ctrl_i_bandwidth;
     motor->inertia = inertia;
 
     motor->limit_i_bus_max = limit_i_bus_max;
@@ -39,6 +41,7 @@ void motor_init(Motor* motor,
     // A approximation for torque constant (Nm/A) from Odrive
     motor->torque_constant = 8.27f / (float)(KV);
 
+
     motor->state = MS_CREATED;
 }
 
@@ -55,8 +58,6 @@ void motor_boot(Motor* motor){
 void motor_stop(Motor* motor){
     foc_refresh(motor);
     pwm_apply_duty(motor->pwm, 0, 0, 0);
-    // FIXME
-    motor->state = MS_IDLE;
 }
 
 void motor_shift_state(Motor* motor, Motor_state state){
@@ -67,20 +68,73 @@ void interrupt_adc_done(Motor* motor){
     motor_loop_main(motor);
 }
 
+
 void motor_loop_main(Motor* motor){
     adc_update(motor->adc);
+    foc_update_d_q(motor);
     // FIXME
-    //encoder_update(motor->encoder);
+    if(!encoder_update(motor->encoder)){
+        motor->state = MS_ERROR_ENCODER_COMMUNITE_FAIL;
+    }
+
+
     if(IF_CONTAIN_IN(motor->state, MS_RUN_BEGIN, MS_RUN_END))
         motor_loop_run(motor);
-    else if(IF_CONTAIN_IN(motor->state, MS_CALIBRATION_BEGIN, MS_CALIBRATION_END))
+    else if(IF_CONTAIN_IN(motor->state, MS_CALIBRATION_BEGIN, MS_CALIBRATION_END-1))
         motor_loop_calibration(motor);
     else if(IF_CONTAIN_IN(motor->state, MS_ERROR_BEGIN, MS_ERROR_END))
         motor_loop_error(motor);
     else if(motor->state == MS_BOOTED)
         motor->state = MS_CALIBRATION_BEGIN;
     else if(motor->state == MS_CALIBRATION_END)
-        motor->state = MS_IDLE;
+        // When everything is ready, where to go?
+        motor->state = MS_RUN_VELOCITY;
+//        motor->state = MS_TEST;
+    else if(motor->state == MS_TEST){
+
+//        monitor_prt(&monitor, "%.3f,%.3f\n",
+//                //(float)motor->encoder->cnt_raw - (float)motor->encoder->offset,
+//                fmodf_real(motor->encoder->i_phase, PIx2),
+////                  fmodf_real(0, PIx2)
+//                motor->encoder->data_raw
+//                );
+//        static float pha_set = 0;
+//        monitor_prt(&monitor, "%f,%f,%f,%f\n",
+//                    //(float)motor->encoder->cnt_raw - (float)motor->encoder->offset,
+//                motor->encoder->i_phase, pha_set,
+//                        fmodf_real(motor->encoder->i_phase, PIx2),
+//                                  fmodf_real(pha_set, PIx2)
+//        //            motorQ.encoder->offset
+//                    );
+//        pha_set += PI/10;
+//        if(foc_voltage_control(motor, 1, 0, pha_set))
+//            pwm_sync_duty(motor->pwm);
+//        hardware_delay_ms(1000);
+
+//
+//        monitor_prt(&monitor, "%d\n",
+//            //(float)motor->encoder->cnt_raw - (float)motor->encoder->offset,
+//                motor->encoder->data_raw
+////            motorQ.encoder->offset
+//            );
+
+
+
+//        if(foc_voltage_control(motor, 0, 5, motor->encoder->i_phase))
+//            pwm_sync_duty(motor->pwm);
+
+//          if(foc_voltage_control(motor, 0.5, 0, 0))
+//              pwm_sync_duty(motor->pwm);
+//          monitor_prt(&monitor, "%.3f,%.3f,%.3f\n", motor->adc->i_a, motor->adc->i_b, motor->adc->i_c);
+//          monitor_prt(&monitor, "%d\n", motor->encoder->data_raw);
+//          hardware_delay_ms(10);
+        if(foc_current_control(motor, 0, 0.5, motor->encoder->i_phase, motor->encoder->i_phase))
+            pwm_sync_duty(motor->pwm);
+
+//        if(foc_d_q_vec_control(motor, 0.2, PI_2, motor->encoder->phase))
+//            pwm_sync_duty(motor->pwm);
+
+    }
     else if(motor->state == MS_IDLE || motor->state == MS_CREATED)
         return;
     else
@@ -94,7 +148,6 @@ void motor_loop_calibration(Motor* motor){
     static uint32_t currents[3] = {0};
     uint32_t phase_resistance_loop_cnt = 3*motor->adc->measure_freq;
     uint32_t phase_inductance_loop_cnt = motor->adc->measure_freq/2;
-    float cc_voltage = motor->calib_current * motor->phase_resistance;
     static float cur_phase = 0;
 
     // current step loop cnt
@@ -169,6 +222,7 @@ void motor_loop_calibration(Motor* motor){
                 cmder_report_prt(motor->cmder, "%.3f %.3f %.3f\nV=%f\n", motor->adc->i_a, motor->adc->i_b, motor->adc->i_c, voltages[0]);
             }
             */
+
             if(step_loop_cnt >= phase_resistance_loop_cnt){
 
                 motor->phase_resistance = voltages[0]/motor->calib_current *2.0f/3.0f;
@@ -193,8 +247,7 @@ void motor_loop_calibration(Motor* motor){
         case MS_CALIBRATION_MEASURE_PHASE_INDUCTANCE_LOOP:
         {
             uint32_t idx = step_loop_cnt & 1;
-            currents_f[idx] += motor->adc->i_a;
-
+            currents_f[idx^1] += motor->adc->i_a;
             // Phase A
             if(foc_voltage_control(motor, voltages[idx], 0, 0))
                 pwm_sync_duty(motor->pwm);
@@ -207,25 +260,56 @@ void motor_loop_calibration(Motor* motor){
                 motor_update_current_ctrl_param(motor);
 
                 pwm_apply_duty(motor->pwm, 0, 0, 0);
-                // FIXME
-                motor->state = MS_CALIBRATION_END;
+                motor->state = MS_CALIBRATION_ENCODER_OFFSET_INIT;
             }
         }
             break;
+        case MS_CALIBRATION_ENCODER_OFFSET_INIT:
+        {
+            if(foc_voltage_control(motor, 1, 0, 0))
+                pwm_sync_duty(motor->pwm);
+            step_loop_cnt = 0;
+            motor->state = MS_CALIBRATION_ENCODER_OFFSET_LOOP;
+        }
+        break;
+        case MS_CALIBRATION_ENCODER_OFFSET_LOOP:
+        {
+            if(foc_voltage_control(motor, 1, 0, 0))
+                pwm_sync_duty(motor->pwm);
+            motor->encoder->offset = motor->encoder->cnt_raw;
+            //cmder_report_prt(motor->cmder, "ret=%d offset=%d\n", motor->encoder->hardware_get_abs_pos_cnt(&motor->encoder->offset), motor->encoder->offset);
+            if(step_loop_cnt >= 100){
+                pwm_apply_duty(motor->pwm, 0, 0, 0);
+                // FIXME
+                motor->state = MS_CALIBRATION_CHECK_DIRECTION_AND_POLE_PAIRS_INIT;
+            }
+        }
+        break;
         case MS_CALIBRATION_CHECK_DIRECTION_AND_POLE_PAIRS_INIT:
         {
             step_loop_cnt = 0;
             cur_phase = 0;
+            motor->state = MS_CALIBRATION_CHECK_DIRECTION_AND_POLE_PAIRS_LOOP;
         }
             break;
         case MS_CALIBRATION_CHECK_DIRECTION_AND_POLE_PAIRS_LOOP:
         {
-            cur_phase += PI * motor->adc->measure_period;
-            if(foc_voltage_control(motor, cc_voltage, 0, cur_phase))
-                pwm_sync_duty(motor->pwm);
-            if(cur_phase >= 2*PIx2){
-
+            if(cur_phase >= PIx2){
+                if(motor->encoder->cnt_sum<0){
+                    motor->encoder->dir ^= 1;
+                }
+                float pole_pairs = (float)motor->encoder->cpr/motor->encoder->cnt_sum;
+                pole_pairs = ABS(pole_pairs);
+                cmder_report_prt(motor->cmder, "Motor pole_pairs %f(set %d)\n", pole_pairs, motor->encoder->motor_pole_pairs);
+                encoder_pll_clear(motor->encoder);
+                pwm_apply_duty(motor->pwm, 0, 0, 0);
+                if(ABS(pole_pairs-(float)motor->encoder->motor_pole_pairs)>1) motor->state = MS_ERROR_CALIBRATION_POLE_PAIRS;
+                else motor->state = MS_CALIBRATION_END;
             }
+            cur_phase += PI * motor->adc->measure_period;
+            if(foc_voltage_control(motor, 1, 0, cur_phase))
+                pwm_sync_duty(motor->pwm);
+
         }
             break;
         case MS_CALIBRATION_END:
@@ -237,7 +321,9 @@ void motor_loop_calibration(Motor* motor){
                                 motor->adc->i_op_amp_offset_theory);
             cmder_report_prt(motor->cmder, "phase_resistance=%f(%fA)\n", motor->phase_resistance, motor->calib_current);
             cmder_report_prt(motor->cmder, "phase_inductance=%f(%fV)\n", motor->phase_inductance, motor->calib_voltage);
-            motor->state = MS_IDLE;
+            cmder_report_prt(motor->cmder, "encoder_offset=%d\n", motor->encoder->offset);
+            cmder_report_prt(motor->cmder, "ctrl_i_kp=%.3f, ctrl_i_ki=%.3f\n", motor->ctrl_i_kp, motor->ctrl_i_ki);
+            cmder_report_prt(motor->cmder, "dir=%d\n", motor->encoder->dir);
         }
             break;
         default:
@@ -266,7 +352,11 @@ void motor_loop_run(Motor* motor){
     }
 
     float torque = motor->torque_sp;
-    float vel = motor->vel_sp;
+    float vel_error = motor->vel_sp - motor->encoder->vel;
+
+    if(motor->state >= MS_RUN_VELOCITY)
+        torque += vel_error * motor->ctrl_vel_kp + motor->ctrl_vel_integral;
+
     float max_torque = motor->torque_constant * motor->limit_i_max;
     bool torque_limited = false;
     if(torque > max_torque){
@@ -277,11 +367,20 @@ void motor_loop_run(Motor* motor){
         torque_limited = true;
     }
 
-    float iq_set = torque / motor->torque_constant;
-    float I_phase = motor->encoder->phase;
+    if(motor->state < MS_RUN_VELOCITY){
+        motor->ctrl_vel_integral = 0;
+    }else{
+        if(torque_limited)
+            motor->ctrl_vel_integral *= 0.99f;
+        else
+            motor->ctrl_vel_integral += (motor->ctrl_vel_ki * motor->encoder->measure_period) * vel_error;
+    }
+
+    motor->i_q_set = torque / motor->torque_constant;
+    float I_phase = motor->encoder->i_phase;
     // 1.5 T_measure delay ?
-    float PWM_phase = I_phase + 1.5f*motor->adc->measure_period*motor->encoder->phase_vel;
-    if(foc_current_control(motor, 0, iq_set, I_phase, PWM_phase))
+    float PWM_phase = I_phase + 1.5f*motor->adc->measure_period*motor->encoder->i_phase_vel;
+    if(foc_current_control(motor, 0, motor->i_q_set, I_phase, PWM_phase))
         pwm_sync_duty(motor->pwm);
 }
 
@@ -306,6 +405,16 @@ void motor_loop_error(Motor* motor){
         {
             cmder_report_error(motor->cmder, motor, "PHASE RESISTANCE OUT OF RANGE");
         } break;
+        case MS_ERROR_CALIBRATION_POLE_PAIRS:
+        {
+            cmder_report_error(motor->cmder, motor, "MOTOR POLE PAIRS UNMATCH");
+            break;
+        }
+        case MS_ERROR_ENCODER_COMMUNITE_FAIL:
+        {
+            cmder_report_error(motor->cmder, motor, "ENCODER COMMUNITE FAIL");
+            break;
+        }
         default:
         {
             cmder_report_error(motor->cmder, motor, "UNKNOWN ERROR");
@@ -316,7 +425,16 @@ void motor_loop_error(Motor* motor){
     //while(1){}
 }
 void motor_update_current_ctrl_param(Motor* motor){
-    motor->ctrl_i_kp = motor->phase_inductance * motor->ctrl_i_bandwidth;
-    float plant_pole = motor->phase_resistance / motor->phase_inductance;
-    motor->ctrl_i_ki = plant_pole * motor->ctrl_i_kp;
+    motor->ctrl_i_kp = motor->phase_inductance * motor->i_ctrl_bandwidth;
+    //float plant_pole = motor->phase_resistance / motor->phase_inductance;
+//    motor->i_ctrl_ki = plant_pole * motor->i_ctrl_kp;
+    motor->ctrl_i_ki = motor->phase_resistance * motor->i_ctrl_bandwidth;
+
+    motor->ctrl_i_integral_id = motor->ctrl_i_integral_iq = 0;
+}
+
+void motor_update_vel_ctrl_param(Motor* motor, float kp, float ki){
+    motor->ctrl_vel_kp = kp;
+    motor->ctrl_vel_ki = ki;
+    motor->ctrl_vel_integral = 0;
 }

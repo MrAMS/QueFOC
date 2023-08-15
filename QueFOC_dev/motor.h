@@ -30,6 +30,9 @@ typedef enum {
     MS_CALIBRATION_MEASURE_PHASE_INDUCTANCE_INIT,
     MS_CALIBRATION_MEASURE_PHASE_INDUCTANCE_LOOP,
 
+    MS_CALIBRATION_ENCODER_OFFSET_INIT,
+    MS_CALIBRATION_ENCODER_OFFSET_LOOP,
+
     MS_CALIBRATION_CHECK_DIRECTION_AND_POLE_PAIRS_INIT,
     MS_CALIBRATION_CHECK_DIRECTION_AND_POLE_PAIRS_LOOP,
 
@@ -39,6 +42,7 @@ typedef enum {
     MS_CALIBRATION_END,
 
     MS_IDLE,
+    MS_TEST,
     /* States of run */
     MS_RUN_BEGIN,
     MS_RUN_TORQUE,
@@ -49,7 +53,9 @@ typedef enum {
     MS_ERROR_PHASE_RESISTANCE_OUT_OF_RANGE,
     MS_ERROR_UNKNOWN_STATE,
     MS_ERROR_CALIBRATION_PHASE_CURRENT_OFFSET,
+    MS_ERROR_CALIBRATION_POLE_PAIRS,
     MS_ERROR_SVM_RESULT_INVALID,
+    MS_ERROR_ENCODER_COMMUNITE_FAIL,
     MS_ERROR_END,
 
 } Motor_state;
@@ -60,8 +66,6 @@ typedef struct Cmder_struct Cmder;
 typedef struct Motor_struct{
     // Motor object ID
     uint8_t id;
-    // motor's pole pairs
-    uint16_t pole_pairs;
     // KT [N*m/A]
     float torque_constant;
     // Calibration current [A]
@@ -69,7 +73,7 @@ typedef struct Motor_struct{
     // Calibration current [V]
     float calib_voltage;
     // Current control bandwidth, perhaps 10% sample frequency
-    float ctrl_i_bandwidth;
+    float i_ctrl_bandwidth;
     // Rotational inertia [Nm/(turn/s^2)]
     float inertia;
 
@@ -94,6 +98,9 @@ typedef struct Motor_struct{
     // Integral of current PI controller
     float ctrl_i_integral_id, ctrl_i_integral_iq;
 
+    // Velocity controller
+    float ctrl_vel_kp, ctrl_vel_ki;
+    float ctrl_vel_integral;
 
     Motor_state state;
 
@@ -106,6 +113,8 @@ typedef struct Motor_struct{
 
     float phase_resistance, phase_inductance;
     float i_d, i_q;
+    float i_q_set;
+    float i_alpha, i_beta;
 
     /* Hardware specific */
     void (*hardware_basic_boot)(void);
@@ -138,5 +147,7 @@ void motor_loop_run(Motor* motor);
 void motor_loop_error(Motor* motor);
 
 void motor_update_current_ctrl_param(Motor* motor);
+
+void motor_update_vel_ctrl_param(Motor* motor, float kp, float ki);
 
 #endif //QUEFOC_DEV_MOTOR_H

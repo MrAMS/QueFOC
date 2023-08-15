@@ -69,5 +69,17 @@ void USART3_IRQHandler(void)
     {
         u16 data = USART_ReceiveData(USART3);
         interrupt_receive_one_char(&cmder, (u8)data);
+        USART_ClearITPendingBit(USART3, USART_IT_RXNE);
+    }
+}
+
+void UART4_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
+void UART4_IRQHandler(void)
+{
+    if(USART_GetITStatus(UART4, USART_IT_RXNE) != RESET)
+    {
+        u16 data = USART_ReceiveData(UART4);
+        rec_data_package_float(data, hardware_uart4_callback);
+        USART_ClearITPendingBit(UART4, USART_IT_RXNE);
     }
 }

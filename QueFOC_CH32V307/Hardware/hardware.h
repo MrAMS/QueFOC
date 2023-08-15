@@ -29,7 +29,7 @@
 // FIXME
 // SAMPLE_TIME_CLK + 12.5 * ADC_CLK
 // 14 * (1/12)MHz = 1.16us
-#define ADC_SAMPLE_TIME             ADC_SampleTime_1Cycles5
+#define ADC_SAMPLE_TIME             ADC_SampleTime_7Cycles5
 #define ADC_TRIGGER                 ADC_ExternalTrigInjecConv_Ext_IT15_TIM8_CC4
 
 /* TIM */
@@ -47,16 +47,17 @@
 
 /* User configuration */
 #define KV                          500
-#define POLE_PAIRS                  14
+#define POLE_PAIRS                  7
 #define INERTIA                     0
+#define CPR                         (1<<14)
 #define ADC_RESOLUTION_BIT          12
 #define V_BUS_GAIN                  15
 #define SHUNT_RESISTANCE            0.001f
 #define I_OP_AMP_OFFSET             1.65f
 #define I_OP_AMP_GAIN               30.0f
-#define CALIB_CURRENT               3.0f
-#define CALIB_VOLTAGE               3.0f
-#define I_MAX                       5.0f
+#define CALIB_CURRENT               1.0f
+#define CALIB_VOLTAGE               1.0f
+#define I_MAX                       10.0f
 // FIXME
 // IR2136 290ns
 #define DEAD_TIME_NS                0
@@ -98,7 +99,14 @@ void hardware_set_pwm_duty_ch_c(float duty);
 
 /* USART */
 void hardware_usart3_boot(void);
-void hardware_usart3_send(const char* data);
+void hardware_usart3_send_str(const char* data);
+
+void trans_data_package_float(const float data, void (*send)(uint8_t));
+void rec_data_package_float(const uint8_t rec, void (*callback)(float));
+
+void hardware_uart4_boot(void);
+void hardware_uart4_send_u8(const u8 data);
+void hardware_uart4_callback(float data);
 
 /* USB */
 void hardware_usb_fs_cdc_boot(void);

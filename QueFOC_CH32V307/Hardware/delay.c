@@ -57,8 +57,11 @@ void hardware_delay_us(uint32_t n)
  *
  * @return  None
  */
+static bool delay_ms_in=0;
 void hardware_delay_ms(uint32_t n)
 {
+    while(delay_ms_in);
+    delay_ms_in = 1;
     uint32_t i;
 
     SysTick->SR &= ~(1 << 0);
@@ -71,4 +74,5 @@ void hardware_delay_ms(uint32_t n)
     while((SysTick->SR & (1 << 0)) != (1 << 0))
         ;
     SysTick->CTLR &= ~(1 << 0);
+    delay_ms_in = 0;
 }

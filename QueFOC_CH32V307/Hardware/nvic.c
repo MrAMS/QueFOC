@@ -14,26 +14,37 @@ void hardware_nvic_boot(void){
     // Only see preemption priority 0..15
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
 
-    // ADC_VBUS_DMA DMA_IT_TC       0
-    NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel1_IRQn;
+
+
+    // ADC          ADC_IT_JEOC     0
+    NVIC_InitStructure.NVIC_IRQChannel = ADC1_2_IRQn;
     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0; // useless
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);
 
-    // ADC          ADC_IT_JEOC     1
-    NVIC_InitStructure.NVIC_IRQChannel = ADC1_2_IRQn;
+    // ADC_VBUS_DMA DMA_IT_TC       1
+    NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel1_IRQn;
     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0; // useless
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);
 
-    // USART3       USART_IT_RXNE   2
-    NVIC_InitStructure.NVIC_IRQChannel = USART3_IRQn;
+    // USART4       USART_IT_RXNE   2
+    NVIC_InitStructure.NVIC_IRQChannel = UART4_IRQn;
     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);
+
+    // USART3       USART_IT_RXNE   3
+    NVIC_InitStructure.NVIC_IRQChannel = USART3_IRQn;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&NVIC_InitStructure);
+
+
 
 
 }

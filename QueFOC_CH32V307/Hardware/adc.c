@@ -59,12 +59,16 @@ void hardware_adc_boot(void){
     ADC_RegularChannelConfig(ADC1, ADC_Channel_3, 1, ADC_SAMPLE_TIME );
 
 
-    ADC_InjectedSequencerLengthConfig(ADC1, 2);
+    ADC_InjectedSequencerLengthConfig(ADC1, 3);
     // FIXME ADC Sample time
     // IC   ADC_CHANNEL_0   Injected
     ADC_InjectedChannelConfig(ADC1, ADC_Channel_0, 1, ADC_SAMPLE_TIME );
     // IB   ADC_CHANNEL_1
     ADC_InjectedChannelConfig(ADC1, ADC_Channel_1, 2, ADC_SAMPLE_TIME );
+
+    ADC_InjectedChannelConfig(ADC1, ADC_Channel_2, 3, ADC_SAMPLE_TIME );
+
+
 
     // Set TIM CH4 as external trigger
     ADC_ExternalTrigInjectedConvConfig(ADC1, ADC_TRIGGER );
@@ -96,15 +100,16 @@ void hardware_adc_boot(void){
     // GND  ADC_CHANNEL_4
     ADC_RegularChannelConfig(ADC2, ADC_Channel_4, 1, ADC_SAMPLE_TIME );
 
-    ADC_InjectedSequencerLengthConfig(ADC2, 1);
+    //ADC_InjectedSequencerLengthConfig(ADC2, 1);
 
     // IA   ADC_CHANNEL_2
-    ADC_InjectedChannelConfig(ADC2, ADC_Channel_2, 1, ADC_SAMPLE_TIME );
+    //ADC_InjectedChannelConfig(ADC2, ADC_Channel_2, 1, ADC_SAMPLE_TIME );
+    //ADC_InjectedChannelConfig(ADC2, ADC_Channel_1, 1, ADC_SAMPLE_TIME );
 
     //ADC_ExternalTrigInjectedConvConfig(ADC2,ADC_ExternalTrigInjecConv_None );
     //ADC_SoftwareStartConvCmd(ADC2, ENABLE);
     //ADC_ExternalTrigInjectedConvConfig(ADC2, ADC_ExternalTrigInjecConv_None );
-    ADC_ExternalTrigInjectedConvCmd(ADC2, ENABLE);
+    //ADC_ExternalTrigInjectedConvCmd(ADC2, ENABLE);
 
     // ADC_IT_JEOC - End of injected conversion interrupt
     //ADC_ITConfig(ADC2, ADC_IT_JEOC, ENABLE);
@@ -142,6 +147,7 @@ static inline u16 get_conversion_val_ADC2(s16 raw){
     return t;
 }
 
+/*
 u16 hardware_adc_read_phase_c(void){
     u16 raw = ADC_GetInjectedConversionValue(ADC1, ADC_InjectedChannel_1);
     return get_conversion_val_ADC1(raw);
@@ -154,6 +160,20 @@ u16 hardware_adc_read_phase_a(void){
     u16 raw = ADC_GetInjectedConversionValue(ADC2, ADC_InjectedChannel_1);
     return get_conversion_val_ADC2(raw);
 }
+*/
+u16 hardware_adc_read_phase_c(void){
+    u16 raw = ADC_GetInjectedConversionValue(ADC1, ADC_InjectedChannel_1);
+    return get_conversion_val_ADC1(raw);
+}
+u16 hardware_adc_read_phase_b(void){
+    u16 raw = ADC_GetInjectedConversionValue(ADC1, ADC_InjectedChannel_2);
+    return get_conversion_val_ADC1(raw);
+}
+u16 hardware_adc_read_phase_a(void){
+    u16 raw = ADC_GetInjectedConversionValue(ADC1, ADC_InjectedChannel_3);
+    return get_conversion_val_ADC1(raw);
+}
+
 u16 hardware_adc_read_vbus(void){
     return get_conversion_val_ADC1(vbus_DMA);
 }
